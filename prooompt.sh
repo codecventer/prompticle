@@ -13,7 +13,7 @@ if [ ! -f "$INPUT_JSON" ]; then
 fi
 
 read -rp "Enter the output directory for images: " OUTPUT_DIR
-read -rp "Enter the fields to use (comma-separated, e.g., name,movement): " FIELD_INPUT
+read -rp "Enter the fields to use (comma-separated, no whitespaces - e.g., name,movement): " FIELD_INPUT
 
 IFS=',' read -ra FIELDS <<< "$FIELD_INPUT"
 
@@ -22,25 +22,27 @@ BASENAME=$(basename -- "$INPUT_JSON")
 FILENAME="${BASENAME%.*}" # e.g., cardio.json → cardio
 mkdir -p "$OUTPUT_DIR/$FILENAME"
 
-# === Loop through Each Object in JSON ===
-COUNT=$(jq length "$INPUT_JSON")
-for ((i=0; i<COUNT; i++)); do
+# === Build jq filter for required fields ===
+FILTER="select("
+for FIELD in "${FIELDS[@]}"; do
+  FILTER+="has(\"$FIELD\") and "
+done
+FILTER="${FILTER% and })" # Remove trailing 'and'
+
+# === Search JSON for matching objects and generate images ===
+jq -c ".. | objects | $FILTER" "$INPUT_JSON" | while IFS= read -r OBJECT; do
   declare -A FIELD_VALUES
   for FIELD in "${FIELDS[@]}"; do
-    VALUE=$(jq -r ".[$i].$FIELD" "$INPUT_JSON")
+    VALUE=$(echo "$OBJECT" | jq -r --arg field "$FIELD" '.[$field]')
     FIELD_VALUES["$FIELD"]="$VALUE"
   done
 
-  # Use first field as the name for the image file
+  # === Use first field as filename ===
   DISPLAY_NAME="${FIELD_VALUES[${FIELDS[0]}]}"
   SAFE_NAME=$(echo "$DISPLAY_NAME" | tr ' ' '_' | tr -dc 'A-Za-z0-9_-')
 
-  # Construct prompt (you can modify this template as needed)
-  PROMPT="Here is the description of how to do a ${FIELD_VALUES[name]}:
-
-\"${FIELD_VALUES[movement]}\"
-
-Please generate a 2D pixel art style image that displays the start and end position of a ${FIELD_VALUES[name]}."
+  # === Construct prompt ===
+  PROMPT="Here is the description of how to do a ${FIELD_VALUES["name"]}: ${FIELD_VALUES["movement"]} Please generate a 2D pixel art style image that displays the start and end position of a ${FIELD_VALUES["name"]}."
 
   echo "🖼️ Generating image for: $DISPLAY_NAME"
 
