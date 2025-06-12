@@ -55,6 +55,8 @@ jq -c ".. | objects | $FILTER" "$INPUT_JSON" | while IFS= read -r OBJECT; do
       \"n\": 1,
       \"size\": \"$SIZE\"
     }")
+  echo "Response: $RESPONSE"
+  echo
 
   IMAGE_URL=$(echo "$RESPONSE" | jq -r '.data[0].url')
 
@@ -63,5 +65,6 @@ jq -c ".. | objects | $FILTER" "$INPUT_JSON" | while IFS= read -r OBJECT; do
     echo "✅ Saved: $OUTPUT_DIR/$FILENAME/${SAFE_NAME}.png"
   else
     echo "❌ Failed to generate image for $DISPLAY_NAME"
+    echo
   fi
 done
