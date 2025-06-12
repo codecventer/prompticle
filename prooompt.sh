@@ -10,6 +10,7 @@ SIZE="1024x1024"
 DEFAULT_JSON="./some.json" # Path to the input JSON file
 DEFAULT_OUTPUT="./images" # Directory to save generated images
 DEFAULT_FIELDS="name,movement" # Comma-separated fields to extract from JSON
+DEFAULT_PROMPT="Here is the description of how to do a {name}: {movement} Please generate a 2D pixel art style image that displays the start and end position of a {name}." # Default prompt template
 
 # === Helper Functions ===
 usage() {
@@ -24,18 +25,34 @@ error_exit() {
 
 # === Parse Args or Prompt ===
 INPUT_JSON="${1:-$DEFAULT_JSON}"
-OUTPUT_DIR="${2:-$DEFAULT_OUTPUT}"
-FIELD_INPUT="${3:-$DEFAULT_FIELDS}"
-
+while [ -z "$INPUT_JSON" ]; do
+  read -rp "Enter the path to the input JSON file: " INPUT_JSON
+done
 if [ ! -f "$INPUT_JSON" ]; then
   error_exit "File not found: $INPUT_JSON"
 fi
+
+OUTPUT_DIR="${2:-$DEFAULT_OUTPUT}"
+while [ -z "$OUTPUT_DIR" ]; do
+  read -rp "Enter the directory to save generated images: " OUTPUT_DIR
+done
+
+FIELD_INPUT="${3:-$DEFAULT_FIELDS}"
+while [ -z "$FIELD_INPUT" ]; do
+  read -rp "Enter comma-separated fields to extract from JSON (e.g. name,movement): " FIELD_INPUT
+done
 
 IFS=',' read -ra FIELDS <<< "$FIELD_INPUT"
 
 BASENAME=$(basename -- "$INPUT_JSON")
 FILENAME="${BASENAME%.*}"
 mkdir -p "$OUTPUT_DIR/$FILENAME"
+
+# === Prompt Setup ===
+PROMPT_TEMPLATE="${PROMPT_TEMPLATE:-$DEFAULT_PROMPT}"
+while [ -z "$PROMPT_TEMPLATE" ]; do
+  read -rp "Enter the prompt template (use {name}, {movement}, etc. as placeholders): " PROMPT_TEMPLATE
+done
 
 # === Build jq Filter ===
 FILTER="select("
@@ -46,16 +63,23 @@ FILTER="${FILTER% and })" # Trim trailing "and"
 
 # === Image Generation Loop ===
 jq -c ".. | objects | $FILTER" "$INPUT_JSON" | while IFS= read -r OBJECT; do
+
   FIELD_VALUES=()
+  declare -A FIELD_MAP
   for FIELD in "${FIELDS[@]}"; do
     VALUE=$(echo "$OBJECT" | jq -r --arg field "$FIELD" '.[$field]')
     FIELD_VALUES+=("$VALUE")
+    FIELD_MAP[$FIELD]="$VALUE"
   done
 
   DISPLAY_NAME="${FIELD_VALUES[0]}"
   SAFE_NAME=$(echo "$DISPLAY_NAME" | tr ' ' '_' | tr -dc 'A-Za-z0-9_-')
 
-  PROMPT="Here is the description of how to do a ${FIELD_VALUES[0]}: ${FIELD_VALUES[1]}. Please generate a 2D pixel art style image that displays the start and end position of a ${FIELD_VALUES[0]}."
+  # Replace placeholders in the prompt template with field values
+  PROMPT="$PROMPT_TEMPLATE"
+  for FIELD in "${FIELDS[@]}"; do
+    PROMPT="${PROMPT//\{$FIELD\}/${FIELD_MAP[$FIELD]}}"
+  done
 
   echo "🖼️ Generating image for: $DISPLAY_NAME"
 
