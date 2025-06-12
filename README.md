@@ -2,7 +2,7 @@
 
 ## Overview
 
-`prooompt.sh` is a Bash script that generates 2D pixel art style images using the OpenAI DALL-E API, based on data from a JSON file. The script extracts specified fields from each object in the JSON, constructs a prompt for each, and saves the generated images to a specified directory.
+`prooompt.sh` is a Bash script that generates images using the OpenAI DALL-E API, based on data from a JSON file. The script extracts specified fields from each object in the JSON, constructs a prompt for each (which can be customized), and saves the generated images to a specified directory.
 
 ## Usage
 
