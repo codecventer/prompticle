@@ -60,4 +60,4 @@ The script will generate images for each object and save them as PNG files in `i
 
 MIT
 
-# prompticle
+# prooompt
