@@ -5,15 +5,26 @@ API_KEY="your_openai_api_key_here"
 MODEL="dall-e-3"
 SIZE="1024x1024"
 
-# === Prompt User for Input ===
-read -rp "Enter the path to your JSON file: " INPUT_JSON
+# === Default Values ===
+INPUT_JSON="${INPUT_JSON:-./some.json}" # Path to your JSON file
+OUTPUT_DIR="${OUTPUT_DIR:-./images}" # Directory to save generated images
+FIELD_INPUT="${FIELD_INPUT:-name,movement}" # JSON fields to use for image generation
+
+# === Prompt User for Input if not set ===
+if [ -z "$INPUT_JSON" ]; then
+  read -rp "Enter the path to your JSON file: " INPUT_JSON
+fi
 if [ ! -f "$INPUT_JSON" ]; then
   echo "❌ Error: File not found at $INPUT_JSON"
   exit 1
 fi
 
-read -rp "Enter the output directory for images: " OUTPUT_DIR
-read -rp "Enter the fields to use (comma-separated, no whitespaces - e.g., name,movement): " FIELD_INPUT
+if [ -z "$OUTPUT_DIR" ]; then
+  read -rp "Enter the output directory for images: " OUTPUT_DIR
+fi
+if [ -z "$FIELD_INPUT" ]; then
+  read -rp "Enter the fields to use (comma-separated, no whitespaces - e.g., name,movement): " FIELD_INPUT
+fi
 
 IFS=',' read -ra FIELDS <<< "$FIELD_INPUT"
 
